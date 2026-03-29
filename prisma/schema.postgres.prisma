@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  password      String
+  name          String
+  role          String
+  boqs          BOQ[]
+  approvals     Approval[]
+  progressUpdates ProgressUpdate[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Settings {
+  id                String @id @default("default")
+  companyName        String?
+  address            String?
+  logoUrl            String?
+  gstNumber          String?
+  panNumber          String?
+  poSeries           String @default("PO")
+  poNextNumber       Int    @default(1)
+  poTerms            String?
+  defaultGstRate     Float  @default(18)
+  defaultMargin      Float  @default(20)
+  currencySymbol     String @default("₹")
+  projectCategories  String @default("Residential,Commercial,Industrial,Infrastructure")
+  smtpHost           String?
+  smtpPort           Int?   @default(587)
+  smtpUser           String?
+  smtpPass           String?
+  smtpFrom           String?
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  body      String
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  contactInfo String?
+  projects    Project[]
+  boqs        BOQ[]
+  inflows     Inflow[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("Active")
+  startDate   DateTime?
+  endDate     DateTime?
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  boqs        BOQ[]
+  purchaseOrders PurchaseOrder[]
+  inflows     Inflow[]
+  outflows    Outflow[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BOQ {
+  id          String   @id @default(cuid())
+  name        String
+  status      String   @default("Draft")
+  state       String   @default("Maharashtra")
+  category    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  subTotal    Float    @default(0)
+  gstAmount   Float    @default(0)
+  totalCost   Float    @default(0)
+  totalValue  Float    @default(0)
+  totalMargin Float    @default(0)
+  clientId    String?
+  projectId   String?
+  createdById String
+  client      Client?  @relation(fields: [clientId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  lineItems   BOQLineItem[]
+  approvals   Approval[]
+  pos         PurchaseOrder[]
+  inflows     Inflow[]
+  outflows    Outflow[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Approval {
+  id        String   @id @default(cuid())
+  status    String
+  comment   String?
+  boqId     String
+  userId    String
+  boq       BOQ      @relation(fields: [boqId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model ProgressUpdate {
+  id          String   @id @default(cuid())
+  quantity    Float
+  remarks     String?
+  date        DateTime @default(now())
+  lineItemId  String
+  updatedById String
+  lineItem    BOQLineItem @relation(fields: [lineItemId], references: [id])
+  updatedBy   User     @relation(fields: [updatedById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model BOQLineItem {
+  id          String   @id @default(cuid())
+  boqId       String
+  itemId      String
+  description String?
+  category    String?
+  unit        String?
+  quantity    Float    @default(0)
+  rate        Float    @default(0)
+  gstRate     Float    @default(0)
+  gstAmount   Float    @default(0)
+  amount      Float    @default(0)
+  vendorId    String?
+  rateType    String   @default("SupplyPlusInstallation")
+  bcs         Float    @default(0)
+  clientPrice Float    @default(0)
+  margin      Float    @default(0)
+  boq         BOQ      @relation(fields: [boqId], references: [id])
+  item        ItemMaster @relation(fields: [itemId], references: [id])
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+  progress    ProgressUpdate[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  contactInfo String?
+  address     String?
+  gstNumber   String?
+  token       String   @unique
+  rates       VendorRate[]
+  mappings    ItemVendorMapping[]
+  purchaseOrders PurchaseOrder[]
+  outflows    Outflow[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model VendorRate {
+  id                   String   @id @default(cuid())
+  vendorId             String
+  itemId               String?
+  vendorItemName       String?
+  vendorCategory       String?
+  submittedRate        Float
+  activeRate           Float?
+  vendorUnit           String?
+  remarks              String?
+  status               String   @default("Pending Review")
+  token                String   @unique
+  vendor               Vendor   @relation(fields: [vendorId], references: [id])
+  item                 ItemMaster? @relation(fields: [itemId], references: [id])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  poNumber    String   @unique
+  boqId       String?
+  projectId   String?
+  vendorId    String
+  subTotal    Float    @default(0)
+  gstAmount   Float    @default(0)
+  totalAmount Float    @default(0)
+  status      String   @default("Draft")
+  terms       String?
+  boq         BOQ?     @relation(fields: [boqId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  items       PurchaseOrderItem[]
+  outflows    Outflow[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  itemId          String?
+  description     String?
+  unit            String?
+  quantity        Float    @default(0)
+  rate            Float    @default(0)
+  gstRate         Float    @default(0)
+  gstAmount       Float    @default(0)
+  total           Float    @default(0)
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  item            ItemMaster? @relation(fields: [itemId], references: [id])
+}
+
+model Inflow {
+  id          String   @id @default(cuid())
+  clientId    String?
+  boqId       String?
+  projectId   String?
+  amount      Float    @default(0)
+  description String?
+  method      String?
+  date        DateTime @default(now())
+  client      Client?  @relation(fields: [clientId], references: [id])
+  boq         BOQ?     @relation(fields: [boqId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Outflow {
+  id          String   @id @default(cuid())
+  vendorId    String?
+  poId        String?
+  boqId       String?
+  projectId   String?
+  amount      Float    @default(0)
+  description String?
+  category    String?
+  method      String?
+  date        DateTime @default(now())
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [poId], references: [id])
+  boq         BOQ?     @relation(fields: [boqId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model State {
+  id        String @id @default(cuid())
+  name      String @unique
+  createdAt DateTime @default(now())
+}
+
+model ItemMaster {
+  id               String @id @default(cuid())
+  itemCode          String @unique
+  name              String
+  category          String?
+  subCategory       String?
+  description       String?
+  unit              String?
+  materialMake      String?
+  sizeThickness     String?
+  finishColor       String?
+  applicationArea   String?
+  vendorType        String?
+  hsnSac            String?
+  typicalRateBand   String?
+  remarks           String?
+  status            String @default("Active")
+  defaultGstRate    Float @default(18)
+  imageUrl          String?
+  stateRates        ItemStateRate[]
+  vendorMappings    ItemVendorMapping[]
+  vendorRates       VendorRate[]
+  poItems           PurchaseOrderItem[]
+  boqItems          BOQLineItem[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ItemStateRate {
+  id                      String @id @default(cuid())
+  itemId                  String
+  state                   String
+  labourRate              Float @default(0)
+  supplyOnlyRate          Float @default(0)
+  supplyPlusInstallationRate Float @default(0)
+  item                    ItemMaster @relation(fields: [itemId], references: [id])
+  @@unique([itemId, state])
+}
+
+model ItemVendorMapping {
+  id        String @id @default(cuid())
+  itemId    String
+  vendorId  String
+  item      ItemMaster @relation(fields: [itemId], references: [id])
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([itemId, vendorId])
+}
