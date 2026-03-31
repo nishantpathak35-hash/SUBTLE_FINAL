@@ -1557,8 +1557,8 @@ async function startServer() {
           } else {
             await tx.vendorRate.create({
               data: {
-                vendorId: vendor.id,
-                itemId: r.itemId,
+                vendor: { connect: { id: vendor.id } },
+                item: { connect: { id: r.itemId } },
                 submittedRate: r.submittedRate,
                 activeRate: r.submittedRate,
                 status: "Pending Review"
@@ -1571,7 +1571,7 @@ async function startServer() {
           for (const ci of customItems) {
             await tx.vendorRate.create({
               data: {
-                vendorId: vendor.id,
+                vendor: { connect: { id: vendor.id } },
                 vendorItemName: ci.name,
                 vendorCategory: ci.category,
                 vendorUnit: ci.unit,
@@ -1633,8 +1633,8 @@ async function startServer() {
         await tx.vendorRate.update({
           where: { id: req.params.id },
           data: {
-            itemId,
-            negotiatedRate,
+            item: itemId ? { connect: { id: itemId } } : undefined,
+            negotiatedRate: negotiatedRate ?? null,
             activeRate: negotiatedRate || rate.submittedRate,
             status: "Active"
           }
@@ -2186,8 +2186,8 @@ async function startServer() {
         
         const rate = await tx.vendorRate.create({
           data: {
-            vendorId: vendor.id,
-            itemId: itemId === 'new' ? null : (itemId || null),
+            vendor: { connect: { id: vendor.id } },
+            item: itemId && itemId !== 'new' ? { connect: { id: itemId } } : undefined,
             vendorItemName: itemId === 'new' ? vendorItemName : null,
             vendorCategory: itemId === 'new' ? vendorCategory : null,
             submittedRate: rateValue,

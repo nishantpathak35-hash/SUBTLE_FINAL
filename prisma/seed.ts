@@ -312,7 +312,7 @@ async function main() {
     return 'Standard';
   };
 
-  const shouldSeedItems = process.env.SEED_ITEMS === 'true';
+  const shouldSeedItems = process.env.SEED_ITEMS !== 'false';
   if (!shouldSeedItems) {
     console.log('SEED_ITEMS is not enabled. Skipping item master generation.');
     return;

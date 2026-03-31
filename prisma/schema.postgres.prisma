@@ -11,8 +11,8 @@ model User {
   id            String           @id @default(cuid())
   email         String           @unique
   password      String
-  name          String
-  role          String
+  name          String           @default("")
+  role          String           @default("Admin")
   boqs          BOQ[]
   approvals     Approval[]
   progressUpdates ProgressUpdate[]
@@ -163,9 +163,11 @@ model Vendor {
   contactInfo String?
   address     String?
   gstNumber   String?
+  state       String   @default("Maharashtra")
   token       String   @unique
   rates       VendorRate[]
   mappings    ItemVendorMapping[]
+  boqLineItems BOQLineItem[]
   purchaseOrders PurchaseOrder[]
   outflows    Outflow[]
   createdAt   DateTime @default(now())
@@ -180,10 +182,11 @@ model VendorRate {
   vendorCategory       String?
   submittedRate        Float
   activeRate           Float?
+  negotiatedRate       Float?
   vendorUnit           String?
   remarks              String?
   status               String   @default("Pending Review")
-  token                String   @unique
+  token                String   @unique @default(cuid())
   vendor               Vendor   @relation(fields: [vendorId], references: [id])
   item                 ItemMaster? @relation(fields: [itemId], references: [id])
   createdAt            DateTime @default(now())
